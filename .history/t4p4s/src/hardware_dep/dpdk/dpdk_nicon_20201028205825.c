@@ -153,7 +153,7 @@ void send_burst_from_controller(struct p4_ctrl_msg* ctrl_m){
     conf->hw.tx_mbufs[port].len = queue_length;
 }
 
-void send_burst_to_controller(struct rte_ether_hdr *eth_hdr){
+void send_burst_to_controller(struct rte_ether_hdr *){
     switch_m->metadata[1] = eth_hdr->s_addr.addr_bytes ;
     switch_m->metadata[2] = eth_hdr->d_addr.addr_bytes ;
     uint16_t* data = (uint16_t *)eth_hdr + 1;

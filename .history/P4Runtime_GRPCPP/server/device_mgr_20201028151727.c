@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 
-extern struct p4_ctrl_msg* switch_m;
 
 struct ConfigFile {
  public:
@@ -155,7 +154,6 @@ grpc::Status table_insert(device_mgr_t *dm, const ::p4::v1::TableEntry &table_en
 	argument_t *arg = NULL;
 
 	struct p4_ctrl_msg ctrl_m;
-	ex
 	ctrl_m.num_field_matches = 0;
 	ctrl_m.num_action_params = 0;
 	ctrl_m.type = P4T_ADD_TABLE_ENTRY;
@@ -577,9 +575,7 @@ grpc::Status dev_mgr_packet(device_mgr_t *dm, const ::p4::v1::StreamMessageReque
 	// packetout = request.mutable_packet();
 	// std::cout << packetout->payload() << std::endl;
 	// std::cout << packetout->metadata_size() << std::endl;
-	int size = request.packet().metadata_size();
-	for(int i = 0; i < size; i++) {
-		const auto &data = request.packet().metadata(i);
+	for(const auto &data : request.packet().metadata()) {
 		// p4v1::PacketMetadata* packetmedadata;
 		// packetmedadata = packetout->mutable_metadata(1);
 		// std::cout << packetmedadata->value() << std::endl;
@@ -625,18 +621,10 @@ grpc::Status dev_mgr_packet(device_mgr_t *dm, const ::p4::v1::StreamMessageReque
 		default:
 			break;
 		} 
-	}
+		}
 	if (status.ok()) {
  		dm->cb(&ctrl_m);
  	}
-	auto packet = response.mutable_packet();
-	packet->set_payload(switch_m->packet);
-	p4v1::PacketMetadata** metadata = packet->add_metadata();
-	metadata[0]->set_metadata_id(1);
-	metadata[0]->set_value(switch_m->metadata[1]);
-	metadata[1]->set_metadata_id(2);
-	metadata[1]->set_value(switch_m->metadata[2]);
-	stream->Write(response);
 	return status;
 }
 

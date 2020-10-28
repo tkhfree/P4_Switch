@@ -46,6 +46,7 @@ def match_type_order(t):
 #[ extern void ternary_lookup_promote(int tableid, uint8_t* key, uint8_t* mask, uint8_t* value);
 
 #[ extern device_mgr_t *dev_mgr_ptr;
+#[ extern struct p4_ctrl_msg* switch_m;
 
 #[ lcore_data *static_lcore;
 #[ extern packet_descriptor_t *static_pd;
