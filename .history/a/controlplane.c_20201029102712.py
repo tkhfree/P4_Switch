@@ -28,7 +28,7 @@ def match_type_order(t):
 
 #[ #include "PI/proto/pi_server.h"
 #[ #include "p4rt/device_mgr.h"
-#[ #include "/home/ndsc/t4p4s/src/hardware_dep/dpdk/dpdk_nicon.c"
+#[ #include "dpdk_nicon.c"
 
 #[ #define member_size(type, member) sizeof(((type *)0)->member)
 
@@ -47,9 +47,9 @@ def match_type_order(t):
 
 #[ extern device_mgr_t *dev_mgr_ptr;
 
-#[ //extern lcore_data *static_lcore;
+#[ extern struct lcore_data *static_lcore;
 #[ extern packet_descriptor_t *static_pd;
-#[ extern void send_burst_from_controller(struct p4_ctrl_msg* ctrl_m);
+#[ extern void send_burst_from_controller(struct lcore_data* lcdata, uint8_t portid);
 
 #[ //extern struct all_metadatas_t all_metadatas;
 
@@ -66,15 +66,8 @@ def get_key_byte_width(k):
     # for special functions like isValid
     if k.get_attr('header') is None:
         return 0
-    
-    if k.header.type._type_ref('is_vw', False):
-        return 0
-
-    if hasattr(k, 'width'):
-        return (k.width+7)/8
-
-    # reaching this point, k can only come from metadata
-    return (k.header.type.size+7)/8
+        
+    return (k.width+7)/8 if not k.header.type.type_ref.is_vw else 0
 
 
 hlir16_tables_with_keys = [t for t in hlir16.tables if hasattr(t, 'key')]
@@ -553,7 +546,11 @@ for table in hlir16_tables_with_keys:
 
 #{ void ctrl_packet_out(struct p4_ctrl_msg* ctrl_m) {
 #[     debug("Control plane send packetout\n");
-#[     send_burst_from_controller(ctrl_m);
+#[     uint8_t port = (ctrl_m->portid);
+#[     send_burst_from_controller(static_lcore, port);
+#[     if (!static_lcore->is_valid) {
+#[       debug("ctrl_packet_out func error"); 
+#[     }
 #} }
 
 

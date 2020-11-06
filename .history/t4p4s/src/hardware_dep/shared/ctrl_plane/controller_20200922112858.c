@@ -59,7 +59,7 @@ void input_processor(void *t)
         {
                 fifo_wait( &(ct->input_queue) );
                 mem_cell = fifo_remove_msg(&(ct->input_queue));
-
+		printf("input_fifoooooooooo");
                 if (mem_cell==0) continue;
 
                 ct->dh( mem_cell->data );

@@ -28,7 +28,7 @@ def match_type_order(t):
 
 #[ #include "PI/proto/pi_server.h"
 #[ #include "p4rt/device_mgr.h"
-#[ #include "/home/ndsc/t4p4s/src/hardware_dep/dpdk/dpdk_nicon.c"
+#[ #include "dpdk_nicon.c"
 
 #[ #define member_size(type, member) sizeof(((type *)0)->member)
 
@@ -47,7 +47,7 @@ def match_type_order(t):
 
 #[ extern device_mgr_t *dev_mgr_ptr;
 
-#[ //extern lcore_data *static_lcore;
+#[ lcore_data *static_lcore;
 #[ extern packet_descriptor_t *static_pd;
 #[ extern void send_burst_from_controller(struct p4_ctrl_msg* ctrl_m);
 
@@ -66,11 +66,10 @@ def get_key_byte_width(k):
     # for special functions like isValid
     if k.get_attr('header') is None:
         return 0
-    
-    if k.header.type._type_ref('is_vw', False):
-        return 0
+        
+    return (k.width+7)/8 if not k.header.type.type_ref.is_vw else 0
 
-    if hasattr(k, 'width'):
+if hasattr(k, 'width'):
         return (k.width+7)/8
 
     # reaching this point, k can only come from metadata

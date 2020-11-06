@@ -37,7 +37,7 @@
 #include <rte_ethdev.h>
 
 #include "gen_include.h"
-#include "dpdk_nicon.c"
+#include "dpdk_nicon.h"
 
 #ifndef T4P4S_NIC_VARIANT
 #error The NIC variant is undefined
@@ -56,12 +56,8 @@
     *d = (uint8_t)(ip & 0xff);\
 }while (0)
 
-//extern lcore_data *static_lcore;
+extern lcore_data *static_lcore;
 packet_descriptor_t *static_pd;
-static void print_mac(uint8_t *mac){
-    printf("%02x:%02x:%02x:%02x:%02x:%02x:\n",
-    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-}
 
 // TODO from...
 extern void initialize_args(int argc, char **argv);
@@ -260,11 +256,6 @@ void do_rx(struct lcore_data* lcdata, packet_descriptor_t* pd)
             //预存命令，预先存到缓存中，防止缓存不命中
             rte_prefetch0(rte_pktmbuf_mtod(pkt, void *));
             eth_hdr = rte_pktmbuf_mtod(pkt,struct rte_ether_hdr *);
-            printf("src mac:");
-            print_mac(eth_hdr->s_addr.addr_bytes);
-            printf("dst mac:");
-            print_mac(eth_hdr->d_addr.addr_bytes);
-
             ipv4_hdr = rte_pktmbuf_mtod_offset(pkt, struct rte_ipv4_hdr *,
                 sizeof(struct rte_ether_hdr));
             uint32_t_to_char(rte_bswap32(ipv4_hdr->src_addr), &a, &b, &c, &d);
@@ -276,9 +267,9 @@ void do_rx(struct lcore_data* lcdata, packet_descriptor_t* pd)
                     rte_bswap16(*(uint16_t *)(ipv4_hdr + 1)),
                     rte_bswap16(*((uint16_t *)(ipv4_hdr + 1) + 1)));
             printf("total length: %d\n",ipv4_hdr->total_length);
-            auto eth_type = rte_bswap16(eth_hdr->ether_type);
-            printf("eth_type: %d\n",eth_type);
             printf("===========================================================\n");
+            auto eth_type = eth_hdr->ether_type;
+            printf("eth_type: %d\n",eth_type);
             if (eth_type == 0806)
             {
                 send_burst_to_controller(eth_hdr);
@@ -304,7 +295,7 @@ bool dpdk_main_loop()
     packet_descriptor_t pd;
     init_dataplane(&pd, lcdata.conf->state.tables);
 
-    //static_lcore = &lcdata;
+    static_lcore = &lcdata;
     static_pd = &pd;
 
     while (core_is_working(&lcdata)) {

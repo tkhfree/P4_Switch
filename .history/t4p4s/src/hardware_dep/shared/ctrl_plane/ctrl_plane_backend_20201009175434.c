@@ -83,6 +83,7 @@ void backend_processor(void* bg)
         tv.tv_usec = 0;
         rfs = master;
         rv = select(bgt->controller_sock+1, &rfs, 0, 0, &tv);
+        printf("backend_prrrrrrrrrrrr/");
         if (bgt->shutdown==1) break;
         if (rv==0) continue; /* timeout */
 
@@ -108,10 +109,12 @@ void input_processor(void *bg)
     backend_t* bgt = (backend_t*)bg;
         mem_cell_t* mem_cell;
     int rval;
+    printf("input_processsssssssssssssssssssssssssss");
     while ( 1 )
     {
         fifo_wait( &(bgt->input_queue) );
         mem_cell = fifo_remove_msg(&(bgt->input_queue));
+	printf("fifooooo");
         if (bgt->shutdown==1) break;
         if (mem_cell==0) continue;
 
@@ -135,6 +138,7 @@ void output_processor(void *bg)
     {
         fifo_wait( &(bgt->output_queue) );
         mem_cell = fifo_remove_msg(&(bgt->output_queue));
+        printf("backend_ppppppppppppppppp");
         if (bgt->shutdown==1) break;
         if (mem_cell==0) continue;
     
@@ -231,6 +235,7 @@ ctrl_plane_backend create_backend(int num_of_threads, int queue_size, char* cont
 
 void launch_backend(ctrl_plane_backend bg)
 {
+    printf("luaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     backend_t *bgt = (backend_t*) bg;
     ctrl_is_initialized = 0;
 
@@ -240,8 +245,11 @@ void launch_backend(ctrl_plane_backend bg)
     }
 
     /* !!!!!!!!!!! Launch the client thread connecting to the controller  */
+    printf("back_end00000");
     dispatch(bgt->tpool, backend_processor, (void*)bgt);
+    printf("back_input.....");
     dispatch(bgt->tpool, input_processor, (void*)bgt);
+    printf("back_output99999");
     dispatch(bgt->tpool, output_processor, (void*)bgt);
 
     while (!ctrl_is_initialized) {

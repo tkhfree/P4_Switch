@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 
-extern struct p4_ctrl_msg* switch_m;
 
 struct ConfigFile {
  public:
@@ -253,6 +252,7 @@ grpc::Status table_delete(device_mgr_t *dm, const ::p4::v1::TableEntry &table_en
 	//status = grpc::Status( grpc::StatusCode::UNIMPLEMENTED, "table_delete is not implemented" );
 
 	table_id = table_entry.table_id();
+	std::cout<<"table_id-----------------:"<<std::endl;
 
 	element_t *elem = get_element(&(dm->id_map), table_id);
 	argument_t *arg = NULL;
@@ -442,6 +442,7 @@ class P4ErrorReporter {
 grpc::Status dev_mgr_write(device_mgr_t *dm, const ::p4::v1::WriteRequest &request, ::p4::v1::WriteResponse *response) {
 	grpc::Status status = grpc::Status::OK;
 	size_t i;
+	printf("diaoyong dev_mgr_write*******");
 	if (request.atomicity() != ::p4::v1::WriteRequest::CONTINUE_ON_ERROR) {
 		status = grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "Not implemented");
 		return status;
@@ -469,11 +470,16 @@ grpc::Status dev_mgr_write(device_mgr_t *dm, const ::p4::v1::WriteRequest &reque
 grpc::Status dev_mgr_read(device_mgr_t *dm, const ::p4::v1::ReadRequest &request, ::p4::v1::ReadResponse *response) {
 	grpc::Status status = grpc::Status::OK;
 	//size_t i;
+
 	//if (request.atomicity() != ::p4::v1::ReadRequest::CONTINUE_ON_ERROR) {
 	//	status = grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "Not implemented");
 	//	return status;
 	//}
+
 	//P4ErrorReporter error_reporter;
+
+	
+
 	return grpc::Status::OK;
 }
 
@@ -550,92 +556,6 @@ grpc::Status dev_mgr_get_pipeline_config(device_mgr_t *dm, ::p4::v1::GetForwardi
 	if (has_config_cookie)
       		config->mutable_cookie()->CopyFrom(config_cookie);
 	return grpc::Status::OK;
-}
-
-// grpc::Status controller_packet_out(device_mgr_t *dm, const ::p4::v1::PacketMetadata &packetmetadata, const char* payload) {
-// 	grpc::Status status = grpc::Status::OK;
-// 	struct p4_ctrl_msg ctrl_m;
-// 	ctrl_m.type = P4T_PACKET_OUT;
-// 	ctrl_m.portid = packetmetadata.value();
-// 	ctrl_m.packet = payload;
-// 	if (status.ok()) {
-// 		dm->cb(&ctrl_m);
-// 	}
-// 	return status;
-// }
-
-grpc::Status dev_mgr_packet(device_mgr_t *dm, const ::p4::v1::StreamMessageRequest &request, grpc::ServerReaderWriter<p4v1::StreamMessageResponse, p4v1::StreamMessageRequest> *stream) {
-	grpc::Status status = grpc::Status::OK;
-	p4v1::StreamMessageResponse response;
-	// p4v1::PacketOut* packetout;
-	char payload[] = request.packet().payload();
-	struct p4_ctrl_msg ctrl_m;
-	ctrl_m.type = P4T_PACKET_OUT;
-	ctrl_m.packet = payload;
-	// packetout = request.mutable_packet();
-	// std::cout << packetout->payload() << std::endl;
-	// std::cout << packetout->metadata_size() << std::endl;
-	int size = request.packet().metadata_size();
-	for(int i = 0; i < size; i++) {
-		const auto &data = request.packet().metadata(i);
-		// p4v1::PacketMetadata* packetmedadata;
-		// packetmedadata = packetout->mutable_metadata(1);
-		// std::cout << packetmedadata->value() << std::endl;
-		// std::cout << packetmedadata->metadata_id() << std::endl;
-		switch (data.metadata_id())
-		{
-		case 1:{
-			const auto value1 = data.value();
-			std::cout << "src mac: " << value1 << std::endl;
-			ctrl_m.metadata[1] = &value1;
-		}			
-			break;
-		case 2:{
-			const auto value2 = data.value();
-			std::cout << "dst mac: " << value2 << std::endl;
-			ctrl_m.metadata[2] = &value2;
-		}			
-			break;
-		case 3:{
-			const auto value3 = data.value();
-			std::cout << "type: " << value3 << std::endl;
-			ctrl_m.metadata[3] = &value3;
-		}			
-			break;
-		case 4:{
-			const auto value4 = data.value();
-			std::cout << "src ip: " << value4 << std::endl;
-			ctrl_m.metadata[4] = &value4;
-		}			
-			break;
-		case 5:{
-			const auto value5 = data.value();
-			std::cout << "dst ip: " << value5 << std::endl;
-			ctrl_m.metadata[5] = &value5;
-		}			
-			break;
-		case 6:{
-			const auto value6 = data.value();
-			std::cout << "fwd port: " << value6 << std::endl;
-			ctrl_m.metadata[6] = &value6;
-		}			
-			break;
-		default:
-			break;
-		} 
-	}
-	if (status.ok()) {
- 		dm->cb(&ctrl_m);
- 	}
-	auto packet = response.mutable_packet();
-	packet->set_payload(switch_m->packet);
-	p4v1::PacketMetadata** metadata = packet->add_metadata();
-	metadata[0]->set_metadata_id(1);
-	metadata[0]->set_value(switch_m->metadata[1]);
-	metadata[1]->set_metadata_id(2);
-	metadata[1]->set_value(switch_m->metadata[2]);
-	stream->Write(response);
-	return status;
 }
 
 void dev_mgr_init(device_mgr_t *dm) {

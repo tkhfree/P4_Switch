@@ -151,6 +151,7 @@ threadpool create_threadpool(int num_threads_in_pool) {
 
 void dispatch(threadpool from_me, dispatch_fn dispatch_to_here,
 	      void *arg) {
+  printf("poollllllllllllll ");
   _threadpool *pool = (_threadpool *) from_me;
 	work_t * cur;
 

@@ -260,11 +260,6 @@ void do_rx(struct lcore_data* lcdata, packet_descriptor_t* pd)
             //预存命令，预先存到缓存中，防止缓存不命中
             rte_prefetch0(rte_pktmbuf_mtod(pkt, void *));
             eth_hdr = rte_pktmbuf_mtod(pkt,struct rte_ether_hdr *);
-            printf("src mac:");
-            print_mac(eth_hdr->s_addr.addr_bytes);
-            printf("dst mac:");
-            print_mac(eth_hdr->d_addr.addr_bytes);
-
             ipv4_hdr = rte_pktmbuf_mtod_offset(pkt, struct rte_ipv4_hdr *,
                 sizeof(struct rte_ether_hdr));
             uint32_t_to_char(rte_bswap32(ipv4_hdr->src_addr), &a, &b, &c, &d);

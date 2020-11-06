@@ -29,7 +29,7 @@ struct p4_ctrl_msg {
 	struct p4_action_parameter* action_params[P4_MAX_NUMBER_OF_ACTION_PARAMETERS];
 	int num_field_matches;
 	struct p4_field_match_header* field_matches[P4_MAX_NUMBER_OF_FIELD_MATCHES];
-	
+
 	uint8_t* metadata[10];
 	char* packet;
 };

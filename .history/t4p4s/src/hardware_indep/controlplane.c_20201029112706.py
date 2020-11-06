@@ -47,7 +47,7 @@ def match_type_order(t):
 
 #[ extern device_mgr_t *dev_mgr_ptr;
 
-#[ //extern lcore_data *static_lcore;
+#[ lcore_data *static_lcore;
 #[ extern packet_descriptor_t *static_pd;
 #[ extern void send_burst_from_controller(struct p4_ctrl_msg* ctrl_m);
 

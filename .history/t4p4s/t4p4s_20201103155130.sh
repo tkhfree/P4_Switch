@@ -583,7 +583,6 @@ fi
 if [ "$(optvalue p4)" != off ]; then
     msg "[$(cc 0)COMPILE  P4-${OPTS[vsn]}$nn] $(cc 0)$(print_cmd_opts ${OPTS[source]})$nn@$(cc 1)${OPTS[variant]}$nn${OPTS[testcase]+, test case $(cc 1)${OPTS[testcase]-(none)}$nn}${OPTS[dbg]+, $(cc 0)debug$nn mode}"
 
-    #source是l2fwd.p4
     addopt p4opts "${OPTS[source]}" " "
     addopt p4opts "--p4v ${OPTS[vsn]}" " "
     addopt p4opts "-g ${T4P4S_SRCGEN_DIR}" " "
@@ -593,7 +592,6 @@ if [ "$(optvalue p4)" != off ]; then
     verbosemsg "P4 compiler options: $(print_cmd_opts "${OPTS[p4opts]}")"
 
     IFS=" "
-    #组合成p4opts ./example/l2fwd.p4_14 --p4v 14 -g ./build/l2fwd@std/srcgen
     $PYTHON -B src/compiler.py ${OPTS[p4opts]}
     exit_on_error "P4 to C compilation failed"
 fi
@@ -732,9 +730,7 @@ if [ "$(optvalue run)" != off ]; then
         #OPTS[executable] =  \P4_Switch\t4p4s\build\l2fwd@std\build/l2fwd
         # sudo -E \P4_Switch\t4p4s\build\l2fwd@std\build/l2fwd -c 0x3 -n 4 -- -p 0x3 --config "\"(0,0,0)........
         sudo -E "${OPTS[executable]}" ${EXEC_OPTS} 2>&1 | egrep -v "^EAL: " \
-        #这里还会起一个进程 tee -a
             |& tee >( tee -a ${T4P4S_LOG_DIR}/last.lit.txt | sed 's/\x1B\[[0-9;]*[JKmsu]//g' >> ${T4P4S_LOG_DIR}/last.txt ) \
-        #这里还会起一个进程 tee 
             |& tee >( tee ${T4P4S_LOG_DIR}/$(date +"%Y%m%d_%H%M%S")_${OPTS[choice]}.lit.txt | sed 's/\x1B\[[0-9;]*[JKmsu]//g' > ${T4P4S_LOG_DIR}/$(date +"%Y%m%d_%H%M%S")_${OPTS[choice]}.txt )
         # note: PIPESTATUS is bash specific
         ERROR_CODE=${PIPESTATUS[0]}
@@ -765,7 +761,6 @@ if [ "$(optvalue run)" != off ]; then
         msg "Running $(cc 1)debugger $DEBUGGER$nn in $(cc 0)$DBGWAIT$nn seconds"
         sleep $DBGWAIT
         print "${OPTS[executable]}"
-        #sudo -E gdb -q -ex run --args  "\P4_Switch\t4p4s\build\l2fwd@std\build/l2fwd" -c 0x3 -n 4 -- -p 0x3 --config "\"(0,0,0)........
         sudo -E ${DEBUGGER} -q -ex run --args "${OPTS[executable]}" ${EXEC_OPTS}
     fi
 fi

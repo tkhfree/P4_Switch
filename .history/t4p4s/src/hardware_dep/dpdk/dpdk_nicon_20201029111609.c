@@ -22,7 +22,7 @@ extern struct lcore_conf lcore_conf[RTE_MAX_LCORE];
 extern void dpdk_init_nic();
 extern uint8_t get_nb_ports();
 
-//struct lcore_data *static_lcore;
+extern lcore_data *static_lcore;
 
 // ------------------------------------------------------
 // Locals
@@ -31,8 +31,7 @@ struct rte_mempool *header_pool, *clone_pool;
 extern struct rte_mempool* pktmbuf_pool[NB_SOCKETS];
 
 struct rte_mbuf* deparse_mbuf;
-struct p4_ctrl_msg pcm;
-struct p4_ctrl_msg* switch_m = &pcm;
+struct p4_ctrl_msg* switch_m;
 
 // ------------------------------------------------------
 
@@ -132,20 +131,20 @@ void send_burst_from_controller(struct p4_ctrl_msg* ctrl_m){
     struct lcore_conf *conf = &lcore_conf[lcore_id];
     
     rte_prefetch0(rte_pktmbuf_mtod(buff, void *));
-    struct rte_ether_hdr *eth_hdr = rte_pktmbuf_mtod(buff,struct rte_ether_hdr *);
-    strcpy(eth_hdr->s_addr.addr_bytes, ctrl_m->metadata[1]);
-    strcpy(eth_hdr->d_addr.addr_bytes, ctrl_m->metadata[2]);
+    eth_hdr = rte_pktmbuf_mtod(buff,struct rte_ether_hdr *);
+    eth_hdr->s_addr.addr_bytes = ctrl_m->metadata[1];
+    eth_hdr->d_addr.addr_bytes = ctrl_m->metadata[2];
     
-    struct rte_ipv4_hdr *ipv4_hdr = rte_pktmbuf_mtod_offset(buff, struct rte_ipv4_hdr *,
+    ipv4_hdr = rte_pktmbuf_mtod_offset(buff, struct rte_ipv4_hdr *,
                 sizeof(struct rte_ether_hdr));
-    ipv4_hdr->src_addr = *(ctrl_m->metadata[4]);
-    ipv4_hdr->dst_addr = *(ctrl_m->metadata[5]);
+    ipv4_hdr->src_addr = ctrl_m->metadata[4];
+    ipv4_hdr->dst_addr = ctrl_m->metadata[5];
 
     uint16_t* data = ((uint16_t *)(ipv4_hdr + 1) + 1) + 1;
     data = ctrl_m->packet;
-    uint8_t port = *(ctrl_m->metadata[6]);
+    (uint8_t)port = ctrl_m->metadata[6];
 
-    uint16_t queue_length = add_packet_to_queue(buff, *(ctrl_m->metadata[6]), lcore_id);
+    uint16_t queue_length = add_packet_to_queue(buff, ctrl_m->metadata[6], lcore_id);
     if (unlikely(queue_length == MAX_PKT_BURST)) {
         debug("    :: BURST SENDING DPDK PACKETS - port:%d\n", port);
         send_burst(conf, MAX_PKT_BURST, port);

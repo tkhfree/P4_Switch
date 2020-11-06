@@ -22,7 +22,7 @@ extern struct lcore_conf lcore_conf[RTE_MAX_LCORE];
 extern void dpdk_init_nic();
 extern uint8_t get_nb_ports();
 
-//struct lcore_data *static_lcore;
+struct lcore_data *static_lcore;
 
 // ------------------------------------------------------
 // Locals
@@ -31,8 +31,7 @@ struct rte_mempool *header_pool, *clone_pool;
 extern struct rte_mempool* pktmbuf_pool[NB_SOCKETS];
 
 struct rte_mbuf* deparse_mbuf;
-struct p4_ctrl_msg pcm;
-struct p4_ctrl_msg* switch_m = &pcm;
+struct p4_ctrl_msg* switch_m;
 
 // ------------------------------------------------------
 

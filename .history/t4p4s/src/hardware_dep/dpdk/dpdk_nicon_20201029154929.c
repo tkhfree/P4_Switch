@@ -22,7 +22,7 @@ extern struct lcore_conf lcore_conf[RTE_MAX_LCORE];
 extern void dpdk_init_nic();
 extern uint8_t get_nb_ports();
 
-//struct lcore_data *static_lcore;
+struct lcore_data *static_lcore;
 
 // ------------------------------------------------------
 // Locals
@@ -31,8 +31,7 @@ struct rte_mempool *header_pool, *clone_pool;
 extern struct rte_mempool* pktmbuf_pool[NB_SOCKETS];
 
 struct rte_mbuf* deparse_mbuf;
-struct p4_ctrl_msg pcm;
-struct p4_ctrl_msg* switch_m = &pcm;
+struct p4_ctrl_msg* switch_m;
 
 // ------------------------------------------------------
 
@@ -145,7 +144,7 @@ void send_burst_from_controller(struct p4_ctrl_msg* ctrl_m){
     data = ctrl_m->packet;
     uint8_t port = *(ctrl_m->metadata[6]);
 
-    uint16_t queue_length = add_packet_to_queue(buff, *(ctrl_m->metadata[6]), lcore_id);
+    uint16_t queue_length = add_packet_to_queue(buff, ctrl_m->metadata[6], lcore_id);
     if (unlikely(queue_length == MAX_PKT_BURST)) {
         debug("    :: BURST SENDING DPDK PACKETS - port:%d\n", port);
         send_burst(conf, MAX_PKT_BURST, port);

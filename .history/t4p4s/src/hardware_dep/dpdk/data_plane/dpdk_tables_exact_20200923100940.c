@@ -56,6 +56,7 @@ int32_t hash_add_key(struct rte_hash* h, void *key)
 void exact_add(lookup_table_t* t, uint8_t* key, uint8_t* value)
 {
     if (t->entry.key_size == 0) return; // don't add lines to keyless tables
+    printf("exact_adddddddddddddddd");
     extended_table_t* ext = (extended_table_t*)t->table;
     uint32_t index = rte_hash_add_key(ext->rte_table, (void*) key);
 
@@ -70,6 +71,7 @@ void exact_add(lookup_table_t* t, uint8_t* key, uint8_t* value)
 void exact_delete(lookup_table_t* t, uint8_t* key)
 {
     if (t->entry.key_size == 0) return; // nothing must have been added
+    printf("exact_delete==================");
     extended_table_t* ext = (extended_table_t*)t->table;
     int32_t ret = rte_hash_lookup(ext->rte_table, key);
     if (ret >= 0)

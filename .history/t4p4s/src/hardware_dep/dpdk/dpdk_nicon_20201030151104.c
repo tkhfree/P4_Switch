@@ -31,8 +31,7 @@ struct rte_mempool *header_pool, *clone_pool;
 extern struct rte_mempool* pktmbuf_pool[NB_SOCKETS];
 
 struct rte_mbuf* deparse_mbuf;
-struct p4_ctrl_msg pcm;
-struct p4_ctrl_msg* switch_m = &pcm;
+struct p4_ctrl_msg* switch_m;
 
 // ------------------------------------------------------
 

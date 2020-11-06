@@ -21,6 +21,7 @@ int handle_p4_msg(char* buffer, int length, p4_msg_callback cb)
 	struct p4_header* header;
 	struct p4_ctrl_msg ctrl_m;
 	int rval = 0;
+	printf("p4_msggggggggggg");
 	if (length<sizeof(struct p4_header)) return -1;
 
 	header = netconv_p4_header((struct p4_header*)buffer);
@@ -98,6 +99,7 @@ int handle_p4_set_default_action(struct p4_set_default_action* m, struct p4_ctrl
 	int num_params;
 	uint16_t offset = 0;
 	char* buffer = 0;
+	printf("handle p4 set default action");
 
 	ctrl_m->type = m->header.type;
 	ctrl_m->xid = m->header.xid;
@@ -178,6 +180,7 @@ int handle_p4_remove_table_entry(struct p4_remove_table_entry* m, struct p4_ctrl
         uint16_t offset = 0;
         char* buffer = 0;
 	struct p4_action* action;
+	printf("zhixingle remove_table+++++");
 
         ctrl_m->type = m->header.type;
         ctrl_m->xid = m->header.xid;

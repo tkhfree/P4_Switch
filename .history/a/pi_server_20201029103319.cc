@@ -88,7 +88,7 @@ void notify_one(StreamChannelReaderWriter *stream, uint64_t device_id, Uint128 e
     }
     stream->Write(response);
 }
-// TODO BY IAN added function of Packet-In/Out
+
 void notify_packetin(StreamChannelReaderWriter *stream, p4v1::PacketOut* packetpout) {
 	p4v1::StreamMessageResponse response;
         p4v1::PacketIn* packetin;
@@ -157,14 +157,13 @@ class P4RuntimeServiceImpl : public p4v1::P4Runtime::Service {
     		return status;
   	}
 
-// TODO BY IAN added function of Packet-In/Out
 	Status StreamChannel(ServerContext *context,
                StreamChannelReaderWriter *stream) override {
-				   auto status = Status:: OK;
-				   p4v1 ::StreamMessageRequest request;
-				SIMPLELOG << "P4Runtime StreamChannel\n";
-				while (stream->Read(&request)) {
-				SIMPLELOG << request.DebugString();
+		p4v1::StreamMessageRequest request;
+		SIMPLELOG << "P4Runtime StreamChannel\n";
+		while (stream->Read(&request)) {
+			SIMPLELOG << "hhhhhhhahahhahah";
+			SIMPLELOG << request.DebugString();
       			switch (request.update_case()) {
         			case p4v1::StreamMessageRequest::kArbitration:
           		{
@@ -176,24 +175,23 @@ class P4RuntimeServiceImpl : public p4v1::P4Runtime::Service {
             		}
 			  		auto election_id = convert_u128(request.arbitration().election_id());
 			  		notify_one(stream, device_id, election_id);
+              		return Status::OK; //, "Invalid");
                 }
           			break;
         			case p4v1::StreamMessageRequest::kPacket:
 				{	
-					// p4v1::PacketOut* packetout;
-					// packetout = request.mutable_packet();
-					// std::cout << packetout->payload() << std::endl;
-					// std::cout << packetout->metadata_size() << std::endl;
+					p4v1::PacketOut* packetout;
+					packetout = request.mutable_packet();
+					std::cout << "payload:"<<packetout->payload() << std::endl;
+					std::cout << "metadata_size:"<<packetout->metadata_size() << std::endl;
 					// p4v1::PacketMetadata* packetmedadata;
 					// packetmedadata = packetout->mutable_metadata(1);
 					// std::cout << packetmedadata->value() << std::endl;
 					// std::cout << packetmedadata->metadata_id() << std::endl;
+					
 					// notify_packetin(stream, packetout);
-					// return Status::OK;
 
-					SIMPLELOG << "StreamChannel PacketOut\n";
-    				SIMPLELOG << request->DebugString();
-					status = dev_mgr_packet(&dm, request, stream);
+					return Status::OK;
 				}
 					break;
         		 	case p4v1::StreamMessageRequest::kDigestAck:
@@ -202,15 +200,12 @@ class P4RuntimeServiceImpl : public p4v1::P4Runtime::Service {
             		 //Devices::get(device_id)->process_stream_message_request(
                 	 //connection_status.connection.get(), request);
           		}
-          			break;
-        			default:
-				{
-					status = Status::OK;
-				}
-           			break;
+          		break;
+        		default:
+           		break;
       			}
     	}
-    		return status;
+    		return Status::OK;
        }
 
        static Uint128 convert_u128(const p4v1::Uint128 &from) {
