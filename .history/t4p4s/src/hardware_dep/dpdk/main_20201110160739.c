@@ -188,34 +188,35 @@ void send_packet(struct lcore_data* lcdata, packet_descriptor_t* pd, int egress_
         //rte_pktmbuf_mtod得到data的首地址
         //TODO BY IAN capture packets
         struct rte_ether_hdr *eth_hdr;
-        // struct rte_ipv4_hdr *ipv4_hdr;
-        // unsigned short a, b, c, d;
+        struct rte_ipv4_hdr *ipv4_hdr;
+        unsigned short a, b, c, d;
+            struct rte_mbuf *pkt = (struct rte_mbuf *)pd->wrapper;
+            //预存命令，预先存到缓存中，防止缓存不命中
+            rte_prefetch0(rte_pktmbuf_mtod(pkt, void *));
+            eth_hdr = rte_pktmbuf_mtod(pkt,struct rte_ether_hdr *);
+            printf("src mac:");
+            print_mac(eth_hdr->s_addr.addr_bytes);
+            printf("dst mac:");
+            print_mac(eth_hdr->d_addr.addr_bytes);
 
-        //预存命令，预先存到缓存中，防止缓存不命中
-        //rte_prefetch0(rte_pktmbuf_mtod(mbuf, void *));
-        eth_hdr = rte_pktmbuf_mtod(mbuf,struct rte_ether_hdr *);
-        // printf("src mac:\n");
-        // print_mac(eth_hdr->s_addr.addr_bytes);
-        // printf("dst mac:\n");
-        // print_mac(eth_hdr->d_addr.addr_bytes);
+            ipv4_hdr = rte_pktmbuf_mtod_offset(pkt, struct rte_ipv4_hdr *,
+                sizeof(struct rte_ether_hdr));
+            uint32_t_to_char(rte_bswap32(ipv4_hdr->src_addr), &a, &b, &c, &d);
+            printf("Packet Src:%hhu.%hhu.%hhu.%hhu \n", a, b, c, d);
+            uint32_t_to_char(rte_bswap32(ipv4_hdr->dst_addr), &a, &b, &c, &d);
+            printf("Dst:%hhu.%hhu.%hhu.%hhu \n", a, b, c, d);
 
-        // ipv4_hdr = rte_pktmbuf_mtod_offset(mbuf, struct rte_ipv4_hdr *,
-        //         sizeof(struct rte_ether_hdr));
-        // uint32_t_to_char(rte_bswap32(ipv4_hdr->src_addr), &a, &b, &c, &d);
-        // printf("Packet Src:%hhu.%hhu.%hhu.%hhu \n", a, b, c, d);
-        // uint32_t_to_char(rte_bswap32(ipv4_hdr->dst_addr), &a, &b, &c, &d);
-        // printf("Dst:%hhu.%hhu.%hhu.%hhu \n", a, b, c, d);
-
-        // printf("Src port:%hu,Dst port:%hu \n",
-        //             rte_bswap16(*(uint16_t *)(ipv4_hdr + 1)),
-        //             rte_bswap16(*((uint16_t *)(ipv4_hdr + 1) + 1)));
-        // printf("total length: %d\n",ipv4_hdr->total_length);
-        // auto eth_type = rte_bswap16(eth_hdr->ether_type);
-        // printf("eth_type: %d\n",eth_type);
-        // printf("===========================================================\n");
-        printf("egress_port == T4P4S_PACKET_IN");
-        send_burst_to_controller(eth_hdr);    
-
+            printf("Src port:%hu,Dst port:%hu \n",
+                    rte_bswap16(*(uint16_t *)(ipv4_hdr + 1)),
+                    rte_bswap16(*((uint16_t *)(ipv4_hdr + 1) + 1)));
+            printf("total length: %d\n",ipv4_hdr->total_length);
+            auto eth_type = rte_bswap16(eth_hdr->ether_type);
+            printf("eth_type: %d\n",eth_type);
+            printf("===========================================================\n");
+            if (eth_type == 0806)
+            {
+                send_burst_to_controller(eth_hdr);
+            }                
     } else {
         dbg_bytes(rte_pktmbuf_mtod(mbuf, uint8_t*), rte_pktmbuf_pkt_len(mbuf), "   " T4LIT(<<,outgoing) " " T4LIT(Emitting,outgoing) " packet on port " T4LIT(%d,port) " (" T4LIT(%d) " bytes): ", egress_port, rte_pktmbuf_pkt_len(mbuf));
         send_single_packet(lcdata, pd, pd->wrapper, egress_port, ingress_port);

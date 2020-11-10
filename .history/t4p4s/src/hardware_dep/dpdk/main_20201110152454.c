@@ -188,34 +188,39 @@ void send_packet(struct lcore_data* lcdata, packet_descriptor_t* pd, int egress_
         //rte_pktmbuf_mtod得到data的首地址
         //TODO BY IAN capture packets
         struct rte_ether_hdr *eth_hdr;
-        // struct rte_ipv4_hdr *ipv4_hdr;
-        // unsigned short a, b, c, d;
+        struct rte_ipv4_hdr *ipv4_hdr;
+        unsigned short a, b, c, d;
 
-        //预存命令，预先存到缓存中，防止缓存不命中
-        //rte_prefetch0(rte_pktmbuf_mtod(mbuf, void *));
-        eth_hdr = rte_pktmbuf_mtod(mbuf,struct rte_ether_hdr *);
-        // printf("src mac:\n");
-        // print_mac(eth_hdr->s_addr.addr_bytes);
-        // printf("dst mac:\n");
-        // print_mac(eth_hdr->d_addr.addr_bytes);
+        for(int j=0; j<lcdata->nb_rx; j++){
+            struct rte_mbuf *pkt = lcdata->pkts_burst[j];
+            //预存命令，预先存到缓存中，防止缓存不命中
+            rte_prefetch0(rte_pktmbuf_mtod(pkt, void *));
+            eth_hdr = rte_pktmbuf_mtod(pkt,struct rte_ether_hdr *);
+            printf("src mac:");
+            print_mac(eth_hdr->s_addr.addr_bytes);
+            printf("dst mac:");
+            print_mac(eth_hdr->d_addr.addr_bytes);
 
-        // ipv4_hdr = rte_pktmbuf_mtod_offset(mbuf, struct rte_ipv4_hdr *,
-        //         sizeof(struct rte_ether_hdr));
-        // uint32_t_to_char(rte_bswap32(ipv4_hdr->src_addr), &a, &b, &c, &d);
-        // printf("Packet Src:%hhu.%hhu.%hhu.%hhu \n", a, b, c, d);
-        // uint32_t_to_char(rte_bswap32(ipv4_hdr->dst_addr), &a, &b, &c, &d);
-        // printf("Dst:%hhu.%hhu.%hhu.%hhu \n", a, b, c, d);
+            ipv4_hdr = rte_pktmbuf_mtod_offset(pkt, struct rte_ipv4_hdr *,
+                sizeof(struct rte_ether_hdr));
+            uint32_t_to_char(rte_bswap32(ipv4_hdr->src_addr), &a, &b, &c, &d);
+            printf("Packet Src:%hhu.%hhu.%hhu.%hhu \n", a, b, c, d);
+            uint32_t_to_char(rte_bswap32(ipv4_hdr->dst_addr), &a, &b, &c, &d);
+            printf("Dst:%hhu.%hhu.%hhu.%hhu \n", a, b, c, d);
 
-        // printf("Src port:%hu,Dst port:%hu \n",
-        //             rte_bswap16(*(uint16_t *)(ipv4_hdr + 1)),
-        //             rte_bswap16(*((uint16_t *)(ipv4_hdr + 1) + 1)));
-        // printf("total length: %d\n",ipv4_hdr->total_length);
-        // auto eth_type = rte_bswap16(eth_hdr->ether_type);
-        // printf("eth_type: %d\n",eth_type);
-        // printf("===========================================================\n");
-        printf("egress_port == T4P4S_PACKET_IN");
-        send_burst_to_controller(eth_hdr);    
-
+            printf("Src port:%hu,Dst port:%hu \n",
+                    rte_bswap16(*(uint16_t *)(ipv4_hdr + 1)),
+                    rte_bswap16(*((uint16_t *)(ipv4_hdr + 1) + 1)));
+            printf("total length: %d\n",ipv4_hdr->total_length);
+            auto eth_type = rte_bswap16(eth_hdr->ether_type);
+            printf("eth_type: %d\n",eth_type);
+            printf("===========================================================\n");
+            if (eth_type == 0806)
+            {
+                send_burst_to_controller(eth_hdr);
+            }           
+        }
+        
     } else {
         dbg_bytes(rte_pktmbuf_mtod(mbuf, uint8_t*), rte_pktmbuf_pkt_len(mbuf), "   " T4LIT(<<,outgoing) " " T4LIT(Emitting,outgoing) " packet on port " T4LIT(%d,port) " (" T4LIT(%d) " bytes): ", egress_port, rte_pktmbuf_pkt_len(mbuf));
         send_single_packet(lcdata, pd, pd->wrapper, egress_port, ingress_port);
@@ -244,21 +249,18 @@ void do_single_rx(struct lcore_data* lcdata, packet_descriptor_t* pd, unsigned q
     if (got_packet) {
 	    if (likely(is_packet_handled(pd, lcdata))) {
 	        init_parser_state(&(lcdata->conf->state.parser_state));
-            //pd获取数据包pd->data = rte_pktmbuf_mtod(p, uint8_t *);
-            //pd->wrapper = p;报文内容
-            //数据包与流表进行比较？
-            //parser_packet process_packet emit_packet
             handle_packet(pd, lcdata->conf->state.tables, &(lcdata->conf->state.parser_state), get_portid(lcdata, queue_idx));
             do_single_tx(lcdata, pd, queue_idx, pkt_idx);
         }
     }
-    // int egress_port = extract_egress_port(pd);
-    // if (unlikely(egress_port == T4P4S_PACKET_IN)) {
-    //     //pd->data = rte_pktmbuf_mtod(p, uint8_t *);
-    //     //pd->wrapper = p;容
-    //     payload = pd->wrapper;
-    // }
-    //没啥用
+
+    int egress_port = extract_egress_port(pd);
+    if (unlikely(egress_port == T4P4S_PACKET_IN)) {
+        //pd->data = rte_pktmbuf_mtod(p, uint8_t *);
+        //pd->wrapper = p;报文内容
+        payload = pd->wrapper;
+    }
+
     main_loop_post_single_rx(lcdata, got_packet);
 }
 
@@ -281,10 +283,8 @@ void do_rx(struct lcore_data* lcdata, packet_descriptor_t* pd)
         
         //lcdata->nb_rx = rte_eth_rx_burst((uint8_t) get_portid(lcdata, queue_idx)端口, queue_id队列, lcdata->pkts_burst缓冲区, MAX_PKT_BURST队列大小);最多收取MAX_PKT_BURST个报文
         //接收到nb_rx个包
-        //根据队列id收包确定网口队列的收包数量，nb_rx赋值
         main_loop_rx_group(lcdata, queue_idx);
         
-        //pkt_count = nb_rx
         unsigned pkt_count = get_pkt_count_in_group(lcdata);
         for (unsigned pkt_idx = 0; pkt_idx < pkt_count; pkt_idx++) {
             do_single_rx(lcdata, pd, queue_idx, pkt_idx);

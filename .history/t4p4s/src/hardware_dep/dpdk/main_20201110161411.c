@@ -185,15 +185,15 @@ void send_packet(struct lcore_data* lcdata, packet_descriptor_t* pd, int egress_
         broadcast_packet(lcdata, pd, egress_port, ingress_port);
     } else if (unlikely(egress_port == T4P4S_PACKET_IN))
     {
-        //rte_pktmbuf_mtod得到data的首地址
-        //TODO BY IAN capture packets
-        struct rte_ether_hdr *eth_hdr;
+        // //rte_pktmbuf_mtod得到data的首地址
+        // //TODO BY IAN capture packets
+        // struct rte_ether_hdr *eth_hdr;
         // struct rte_ipv4_hdr *ipv4_hdr;
         // unsigned short a, b, c, d;
 
-        //预存命令，预先存到缓存中，防止缓存不命中
-        //rte_prefetch0(rte_pktmbuf_mtod(mbuf, void *));
-        eth_hdr = rte_pktmbuf_mtod(mbuf,struct rte_ether_hdr *);
+        // //预存命令，预先存到缓存中，防止缓存不命中
+        // //rte_prefetch0(rte_pktmbuf_mtod(mbuf, void *));
+        // eth_hdr = rte_pktmbuf_mtod(mbuf,struct rte_ether_hdr *);
         // printf("src mac:\n");
         // print_mac(eth_hdr->s_addr.addr_bytes);
         // printf("dst mac:\n");
