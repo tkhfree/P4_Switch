@@ -32,6 +32,7 @@ static device_mgr_t dm;
 extern "C" {
 	device_mgr_t *dev_mgr_ptr = &dm;
 }
+std::unique_ptr<ServerCompletionQueue> cq_;
 /*
 void gnmi__g_nmi__capabilities_cb (grpc_c_context_t *context)
 {
@@ -192,7 +193,6 @@ class P4RuntimeServiceImpl : public p4v1::P4Runtime::Service {
 					// return Status::OK;
 
 					SIMPLELOG << "StreamChannel PacketOut\n";
-    				SIMPLELOG << request->DebugString();
 					status = dev_mgr_packet(&dm, request, stream);
 				}
 					break;
@@ -241,10 +241,105 @@ class ServerConfigServiceImpl : public p4serverv1::ServerConfig::Service {
   }
 };
 */
+
+// class StreamChannelImpl {
+// {
+// 	public:
+//         StreamChannelImpl(P4Runtime::AsyncService* service, ServerCompletionQueue* cq)
+//                 : service_(service)
+//                 , cq_(cq)
+//                 , responder_(&ctx_)
+//                 , status_(CREATE)
+//                 , times_(0)
+//         {
+//             Proceed();
+//         }
+
+// 		void Proceed()
+//         {
+//             if (status_ == CREATE)
+//             {
+//                 status_ = PROCESS;
+//                 service_->RequestStreamChannel(&ctx_, &stream, cq_, cq_, this);
+// 			}
+//             else if (status_ == PROCESS)
+//             {
+//                 // Now that we go through this stage multiple times,
+//                 // we don't want to create a new instance every time.
+//                 // Refer to gRPC's original example if you don't understand
+//                 // why we create a new instance of CallData here.
+//                 if (times_ == 0)
+//                 {
+//                     new CallData(service_, cq_);
+//                 }
+
+//                 if (times_++ >= request_.num_greetings())
+//                 {
+//                     status_ = FINISH;
+//                     std::cout<< request_.name() <<"  "<< request_.num_greetings() <<" write finished!!" <<std::endl;
+//                     responder_.Finish(Status::OK, this);
+//                 }
+//                 else
+//                 {
+//                     std::string prefix("Hello ");
+//                     reply_.set_message(prefix + request_.name() + ", no " + std::to_string(times_) );
+
+//                     responder_.Write(reply_, this);
+//                 }
+//             }
+//             else
+//             {
+//                 GPR_ASSERT(status_ == FINISH);
+//                 delete this;
+//             }
+//         }
+
+// 	private:
+// 		P4Runtime::AsyncService* service_;
+//         ServerCompletionQueue* cq_;
+//         ServerContext ctx_;
+
+//         p4v1 ::StreamMessageRequest request_;
+//         p4v1 ::StreamMessageResponse reply_;
+
+//         ServerAsyncReaderWriter<reply_, request_> stream;
+
+//         int times_;
+
+//         enum CallStatus
+//         {
+//             CREATE,
+//             PROCESS,
+//             FINISH
+//         };
+//         CallStatus status_; // The current serving state.			
+
+// }
+
+void HandleRpcs()
+    {
+		CallStatus status = CREATE;
+        new StreamChannelImpl(&server_data->service_, cq_.get(), status ,&dm);
+        void* tag; // uniquely identifies a request.
+        bool ok;
+        while (true)
+        {
+			cq_->Next(&tag, &ok)
+            if(ok == true) {
+				static_cast<StreamChannelImpl*>(tag)->Proceed();				
+			}else{
+				continue;
+			}
+            //GPR_ASSERT(ok);
+            //static_cast<StreamChannelImpl*>(tag)->Proceed();
+        }
+    }
+
 struct ServerData {
   std::string server_address;
   int server_port;
   P4RuntimeServiceImpl pi_service;
+  P4Runtime::AsyncService service_;
 //  std::unique_ptr<gnmi::gNMI::Service> gnmi_service;
   //ServerConfigServiceImpl server_config_service;
   ServerBuilder builder;
@@ -265,12 +360,16 @@ void PIGrpcServerRunAddrGnmi(const char *server_address, void *gnmi_service)
     &server_data->server_port);
   builder.RegisterService(&server_data->pi_service);
 // builder.RegisterService(server_data->gnmi_service.get());
+//  std::unique_ptr<ServerCompletionQueue> cq_;
+  cq_ = builder.AddCompletionQueue();
+  builder.RegisterService(&server_data->service_);
 //  builder.RegisterService(&server_data->server_config_service);
   builder.SetMaxReceiveMessageSize(256*1024*1024);  // 256MB
 
   server_data->server = builder.BuildAndStart();
   std::cout << "Server listening on " << server_data->server_address << "\n";
 
+  //HandleRpcs();
 }
 
 void PIGrpcServerRunAddr(const char *server_address) {
@@ -279,6 +378,7 @@ void PIGrpcServerRunAddr(const char *server_address) {
 
 void PIGrpcServerRun() {
   PIGrpcServerRunAddrGnmi("127.0.0.1:50051", 0);
+  HandleRpcs();
 }
 
 int PIGrpcServerGetPort() {

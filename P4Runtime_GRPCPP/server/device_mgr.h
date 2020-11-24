@@ -26,6 +26,11 @@ typedef struct device_mgr_t {
 typedef enum {
 	P4IDS_TABLE = 0,
 } p4_ids;
+typedef enum CallStatus{
+            CREATE,
+            PROCESS,
+			PACKETIN,
+            FINISH};
 
 grpc::Status table_insert(device_mgr_t *dm, const ::p4::v1::TableEntry &table_entry);
 
@@ -43,10 +48,12 @@ grpc::Status dev_mgr_set_pipeline_config(device_mgr_t *dm, ::p4::v1::SetForwardi
 
 grpc::Status dev_mgr_get_pipeline_config(device_mgr_t *dm, ::p4::v1::GetForwardingPipelineConfigRequest::ResponseType response_type, ::p4::v1::ForwardingPipelineConfig *config);
 
+grpc::Status dev_mgr_packet(device_mgr_t *dm, const ::p4::v1::StreamMessageRequest &request, grpc::ServerReaderWriter<::p4::v1::StreamMessageResponse, ::p4::v1::StreamMessageRequest> *stream);
 
 extern "C" {
   void dev_mgr_init(device_mgr_t *dm);
   void dev_mgr_init_with_t4p4s(device_mgr_t *dm, p4_msg_callback cb, uint64_t device_id);
+  void async_packetin_data(uint8_t* data);
 }
 
 #endif /* __DEVICE_MGR_H__ */

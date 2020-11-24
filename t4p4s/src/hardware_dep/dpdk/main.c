@@ -175,6 +175,7 @@ void send_packet(struct lcore_data* lcdata, packet_descriptor_t* pd, int egress_
 {
     uint32_t lcore_id = rte_lcore_id();
     struct rte_mbuf* mbuf = (struct rte_mbuf *)pd->wrapper;
+    uint8_t *data = pd->data;
 
     if (unlikely(egress_port == T4P4S_BROADCAST_PORT)) {
         #ifdef T4P4S_DEBUG
@@ -214,7 +215,8 @@ void send_packet(struct lcore_data* lcdata, packet_descriptor_t* pd, int egress_
         // printf("eth_type: %d\n",eth_type);
         // printf("===========================================================\n");
         printf("egress_port == T4P4S_PACKET_IN");
-        send_burst_to_controller(eth_hdr);    
+        send_burst_to_controller(eth_hdr);
+        async_packetin(data);    
 
     } else {
         dbg_bytes(rte_pktmbuf_mtod(mbuf, uint8_t*), rte_pktmbuf_pkt_len(mbuf), "   " T4LIT(<<,outgoing) " " T4LIT(Emitting,outgoing) " packet on port " T4LIT(%d,port) " (" T4LIT(%d) " bytes): ", egress_port, rte_pktmbuf_pkt_len(mbuf));

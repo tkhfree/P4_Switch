@@ -586,3 +586,9 @@ for table in hlir16_tables_with_keys:
 #[     PIGrpcServerRun();
 #[ #endif
 #[ }
+
+#[ void async_packetin(uint8_t* data)
+#[ {
+#[     
+#[     async_packetin_data(data);
+#[ }

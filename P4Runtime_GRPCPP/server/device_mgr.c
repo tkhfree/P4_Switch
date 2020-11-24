@@ -5,8 +5,17 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 
-extern struct p4_ctrl_msg* switch_m;
+// extern struct p4_ctrl_msg* switch_m;
+using grpc::Server;
+using grpc::ServerBuilder;
+using grpc::ServerContext;
+using grpc::ServerWriter;
+using grpc::ServerReaderWriter;
+using grpc::Status;
+using grpc::StatusCode;
 
+namespace p4v1 = ::p4::v1;
+extern std::unique_ptr<ServerCompletionQueue> cq_;
 struct ConfigFile {
  public:
   ConfigFile() { }
@@ -564,9 +573,9 @@ grpc::Status dev_mgr_get_pipeline_config(device_mgr_t *dm, ::p4::v1::GetForwardi
 // 	return status;
 // }
 
-grpc::Status dev_mgr_packet(device_mgr_t *dm, const ::p4::v1::StreamMessageRequest &request, grpc::ServerReaderWriter<p4v1::StreamMessageResponse, p4v1::StreamMessageRequest> *stream) {
+grpc::Status dev_mgr_packet(device_mgr_t *dm, const ::p4::v1::StreamMessageRequest &request, grpc::ServerReaderWriter<::p4::v1::StreamMessageResponse,::p4::v1::StreamMessageRequest> *stream) {
 	grpc::Status status = grpc::Status::OK;
-	p4v1::StreamMessageResponse response;
+	::p4::v1::StreamMessageResponse response;
 	// p4v1::PacketOut* packetout;
 	char payload[] = request.packet().payload();
 	struct p4_ctrl_msg ctrl_m;
@@ -629,13 +638,96 @@ grpc::Status dev_mgr_packet(device_mgr_t *dm, const ::p4::v1::StreamMessageReque
  	}
 	auto packet = response.mutable_packet();
 	packet->set_payload(switch_m->packet);
-	p4v1::PacketMetadata** metadata = packet->add_metadata();
+	::p4::v1::PacketMetadata** metadata = packet->add_metadata();
 	metadata[0]->set_metadata_id(1);
 	metadata[0]->set_value(switch_m->metadata[1]);
 	metadata[1]->set_metadata_id(2);
 	metadata[1]->set_value(switch_m->metadata[2]);
 	stream->Write(response);
 	return status;
+}
+
+class StreamChannelImpl {
+{
+	public:
+        StreamChannelImpl(P4Runtime::AsyncService* service, ServerCompletionQueue* cq, uint8_t* data, CallStatus status, device_mgr_t *dm)
+                : service_(service)
+                , cq_(cq)
+                , stream(&ctx_)
+                , status_(status)
+                , times_(0)
+				, data_(data)
+				, dm_(dm)
+        {
+            Proceed();
+        }
+
+		void Proceed()
+        {
+            if (status_ == CREATE)
+            {
+                status_ = PROCESS;
+                service_->RequestStreamChannel(&ctx_, &stream, cq_, cq_, this);
+			}
+            else if(status_ == PACKETIN)
+			{
+				status_ = FINISH;
+				reply_.packet().set_payload(data_);
+				stream.Write(reply_, this);
+				stream.Finish(Status::OK, this);
+			}
+			else if (status_ == PROCESS)
+            {
+                // Now that we go through this stage multiple times,
+                // we don't want to create a new instance every time.
+                // Refer to gRPC's original example if you don't understand
+                // why we create a new instance of CallData here.
+                // if (times_ == 0)
+                // {
+                //     new CallData(service_, cq_);
+                // }
+                status_ = FINISH;
+                // std::cout<< request_.name() <<"  "<< request_.num_greetings() <<" write finished!!" <<std::endl;
+                // std::string prefix("Hello ");
+                //reply_.set_message(prefix + request_.name() + ", no " + std::to_string(times_) );
+                stream.Read(&stream, this);
+				char payload[] = request_.packet().payload();
+				struct p4_ctrl_msg ctrl_m;
+				ctrl_m.type = P4T_PACKET_OUT;
+				ctrl_m.packet = payload;
+				dm->cb(&ctrl_m);
+            }
+            else
+            {
+                GPR_ASSERT(status_ == FINISH);
+                delete this;
+            }
+        }
+
+	private:
+		char* data_;
+		P4Runtime::AsyncService* service_;
+        ServerCompletionQueue* cq_;
+        ServerContext ctx_;
+
+        p4v1 ::StreamMessageRequest request_;
+        p4v1 ::StreamMessageResponse reply_;
+
+        ServerAsyncReaderWriter<reply_, request_> stream;
+
+        int times_;
+
+        CallStatus status_; // The current serving state.	
+
+		device_mgr_t *dm_;		
+
+}
+void async_packetin_data(uint8_t* data) {
+  	// std::unique_ptr<ServerCompletionQueue> cq_;
+  	P4Runtime::AsyncService service_;
+  	//std::unique_ptr<Server> server_;
+	CallStatus status = PACKETIN;
+	new StreamChannelImpl(&service_, cq_.get(), data, status);
 }
 
 void dev_mgr_init(device_mgr_t *dm) {
